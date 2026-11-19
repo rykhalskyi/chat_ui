@@ -1,3 +1,4 @@
+import 'package:chat_ui_3/core/app_info.dart';
 import 'package:chat_ui_3/core/app_theme.dart';
 import 'package:chat_ui_3/domain/entities/model_info.dart';
 import 'package:chat_ui_3/ui/settings/settings_controller.dart';
@@ -28,7 +29,11 @@ void main() {
         value: controller,
         child: MaterialApp(
           theme: AppTheme.light(),
-          home: const SettingsScreen(),
+          home: SettingsScreen(
+            versionFuture: Future.value(
+              const AppVersion(version: '0.1.0', buildNumber: '1'),
+            ),
+          ),
         ),
       ),
     );
@@ -57,5 +62,13 @@ void main() {
     expect(repository.settings.baseUrl, 'https://example.test/v1');
     expect(repository.apiKey, 'sk-test');
     expect(find.text('Settings saved.'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('appVersionTile')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    expect(find.text('Version 0.1.0 (build 1)'), findsOneWidget);
   });
 }

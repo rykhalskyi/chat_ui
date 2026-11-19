@@ -19,6 +19,7 @@ restore, plus the launcher icon, wide-screen layout, and release hardening.
 - **UI library:** `material_ui: ^1.1.0` — the app imports
   `package:material_ui/material_ui.dart` instead of `package:flutter/material.dart`.
 - **Icons:** `cupertino_icons`.
+- **App metadata:** `package_info_plus` (version shown in Settings).
 - **State/DI:** `provider` (`ChangeNotifier` controllers).
 - **Networking:** `http` (OpenAI-compatible REST + SSE).
 - **Storage:** `shared_preferences` (settings), `flutter_secure_storage` (API key),
@@ -84,6 +85,7 @@ chat_ui/
 - Dart package name: `chat_ui_3`
 - Android `applicationId` / namespace: `com.otakeessen.chatui`
 - Android app label: `Chat UI`
+- App version: `0.1.0+1` (`versionName 0.1.0`, `versionCode 1`)
 - Kotlin entry: `android/app/src/main/kotlin/com/otakeessen/chatui/MainActivity.kt`
 
 ## Design & plan

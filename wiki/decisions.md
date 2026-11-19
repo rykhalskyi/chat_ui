@@ -23,3 +23,4 @@ Append-only decision record. The "why" lives here; the full change history lives
 - [2026-11-19] D-20 — Keep regenerate/retry in the app bar and rename/delete in the conversation drawer — because the extra app-bar overflow squeezed conversation titles
 - [2026-11-19] D-21 — Keep drafts in memory per conversation for the session — because persisting them adds little value while composing and keeps storage simple
 - [2026-11-19] D-22 — Disable cleartext traffic on Android — because all supported endpoints are HTTPS and this prevents accidental plaintext use
+- [2026-11-19] D-23 — Start app versioning at 0.1.0 and read the installed version with package_info_plus — because Settings should show the real package metadata instead of a duplicated constant

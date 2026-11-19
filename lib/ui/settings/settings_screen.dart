@@ -1,11 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/app_info.dart';
 import '../../domain/entities/app_settings.dart';
 import 'settings_controller.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.versionFuture});
+
+  final Future<AppVersion>? versionFuture;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -20,10 +23,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _temperature;
   late final TextEditingController _maxTokens;
   bool _obscureApiKey = true;
+  late final Future<AppVersion> _versionFuture;
 
   @override
   void initState() {
     super.initState();
+    _versionFuture = widget.versionFuture ?? AppInfo.current();
     final controller = context.read<SettingsController>();
     _baseUrl = TextEditingController(text: controller.settings.baseUrl);
     _apiKey = TextEditingController(text: controller.apiKey);
@@ -361,6 +366,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         label: const Text('Save'),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 24),
+                  Text('About', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  FutureBuilder<AppVersion>(
+                    future: _versionFuture,
+                    builder: (context, snapshot) {
+                      final version = snapshot.data;
+                      return ListTile(
+                        key: const Key('appVersionTile'),
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.info_outline),
+                        title: const Text('Chat UI'),
+                        subtitle: Text(
+                          version != null
+                              ? 'Version ${version.display}'
+                              : snapshot.hasError
+                              ? 'Version unavailable'
+                              : 'Version …',
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
                 ],

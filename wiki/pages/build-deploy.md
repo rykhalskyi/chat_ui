@@ -68,6 +68,12 @@ changing the source.
 dart format lib test
 ```
 
+## Version
+
+The app version is `version: 0.1.0+1` in `pubspec.yaml` (Android `versionName 0.1.0`,
+`versionCode 1`). Settings reads it at runtime with `package_info_plus`; if the platform
+channel is unavailable it falls back to `0.1.0 (build 1)`.
+
 ## Wiki helper
 
 Requires Node.js (v24 available). Run from project root:
