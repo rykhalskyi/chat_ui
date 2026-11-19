@@ -31,7 +31,7 @@ void main() {
           theme: AppTheme.light(),
           home: SettingsScreen(
             versionFuture: Future.value(
-              const AppVersion(version: '0.1.0', buildNumber: '1'),
+              const AppVersion(version: '0.2.0', buildNumber: '2'),
             ),
           ),
         ),
@@ -52,14 +52,33 @@ void main() {
     expect(find.text('Connected — 2 models'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.byKey(const Key('saveSettingsButton')),
+      find.byKey(const Key('useConnectAddressSwitch')),
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.tap(find.byKey(const Key('useConnectAddressSwitch')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('connectAddressField')),
+      '192.168.2.240',
+    );
+    await tester.pump();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('saveSettingsButton')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.byKey(const Key('saveSettingsButton')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('saveSettingsButton')));
     await tester.pumpAndSettle();
 
     expect(repository.settings.baseUrl, 'https://example.test/v1');
+    expect(repository.settings.useConnectAddress, isTrue);
+    expect(repository.settings.connectAddress, '192.168.2.240');
     expect(repository.apiKey, 'sk-test');
     expect(find.text('Settings saved.'), findsOneWidget);
 
@@ -69,6 +88,6 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pump();
-    expect(find.text('Version 0.1.0 (build 1)'), findsOneWidget);
+    expect(find.text('Version 0.2.0 (build 2)'), findsOneWidget);
   });
 }

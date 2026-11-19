@@ -344,7 +344,10 @@ dark, and system themes.
 
 - Base URL, API key (obscured), default model, system prompt, temperature, max tokens,
   theme mode.
-- “Test connection” → `GET /v1/models`, shows success + model count or the error.
+- LAN access: switch for an optional LAN IP override plus the connect address. The base
+  URL host is kept for TLS/SNI; the socket dials the override. Off = normal DNS.
+- “Test connection” → `GET /v1/models`, shows success + model count or the error; uses
+  the LAN override when enabled.
 - “About” with app version. “Clear all conversations” behind a confirmation.
 
 ## 11. State & dependency injection
@@ -369,6 +372,8 @@ dark, and system themes.
 - No prompts/responses in logs in release; debug logs go through a single logger that
   is disabled by default.
 - Note in the UI/readme that LiteLLM traces calls in Langfuse on the server.
+- The LAN IP override only changes the socket destination; TLS SNI and certificate
+  validation still use the base-URL hostname.
 
 ## 13. Testing
 

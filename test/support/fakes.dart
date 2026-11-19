@@ -273,9 +273,15 @@ class TestLlmFactory extends LlmClientFactory {
 
   final List<LlmClient> clients;
   int calls = 0;
+  String? lastConnectAddress;
 
   @override
-  LlmClient create({required String baseUrl, required String apiKey}) {
+  LlmClient create({
+    required String baseUrl,
+    required String apiKey,
+    String? connectAddress,
+  }) {
+    lastConnectAddress = connectAddress;
     final index = calls < clients.length ? calls : clients.length - 1;
     calls++;
     return clients[index];

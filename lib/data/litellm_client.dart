@@ -68,7 +68,7 @@ class _LiteLlmStreamHandle implements LlmStreamHandle {
     required this.request,
   });
 
-  static const _connectTimeout = Duration(seconds: 15);
+  static const _headerTimeout = Duration(minutes: 10);
 
   final String baseUrl;
   final String apiKey;
@@ -117,7 +117,7 @@ class _LiteLlmStreamHandle implements LlmStreamHandle {
         });
       httpRequest.body = jsonEncode(_body());
 
-      final response = await client.send(httpRequest).timeout(_connectTimeout);
+      final response = await client.send(httpRequest).timeout(_headerTimeout);
       if (_cancelled) {
         return;
       }
@@ -210,7 +210,7 @@ class _LiteLlmStreamHandle implements LlmStreamHandle {
           const StreamFailed(
             LlmException(
               LlmErrorKind.timeout,
-              'The request timed out before the server responded.',
+              'The server did not respond in time. A cold model load can take a while; try again.',
             ),
           ),
         );

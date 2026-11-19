@@ -1,18 +1,22 @@
-import 'package:http/http.dart' as http;
-
 import '../domain/llm/llm_client.dart';
+import 'api_client_factory.dart';
 import 'litellm_client.dart';
 
 class LlmClientFactory {
-  const LlmClientFactory({this.clientFactory});
+  const LlmClientFactory({this.apiClientFactory = const ApiClientFactory()});
 
-  final http.Client Function()? clientFactory;
+  final ApiClientFactory apiClientFactory;
 
-  LlmClient create({required String baseUrl, required String apiKey}) {
+  LlmClient create({
+    required String baseUrl,
+    required String apiKey,
+    String? connectAddress,
+  }) {
     return LiteLlmClient(
       baseUrl: baseUrl,
       apiKey: apiKey,
-      clientFactory: clientFactory,
+      clientFactory: () =>
+          apiClientFactory.create(connectAddress: connectAddress),
     );
   }
 }

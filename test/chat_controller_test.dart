@@ -2,6 +2,7 @@ import 'package:chat_ui_3/core/exceptions.dart';
 import 'package:chat_ui_3/data/db/app_database.dart';
 import 'package:chat_ui_3/data/mock_llm_client.dart';
 import 'package:chat_ui_3/data/sqflite_chat_repository.dart';
+import 'package:chat_ui_3/domain/entities/app_settings.dart';
 import 'package:chat_ui_3/domain/entities/message.dart';
 import 'package:chat_ui_3/ui/chat/chat_controller.dart';
 import 'package:chat_ui_3/ui/chat/conversations_controller.dart';
@@ -69,6 +70,7 @@ void main() {
     expect(chat.phase, ChatRunPhase.idle);
     expect(chat.contextTrimmed, isFalse);
     expect(conversations.conversations.single.title, 'Hello');
+    expect(factory.lastConnectAddress, isNull);
 
     final persisted = await repository.listMessages(chat.active!.id);
     expect(persisted, hasLength(2));
@@ -227,6 +229,31 @@ void main() {
     expect(chat.messages, hasLength(2));
     expect(chat.messages.last.content, 'second answer');
     expect(chat.messages.last.status, MessageStatus.complete);
+  });
+
+  test('passes the LAN override to the LLM client', () async {
+    chat.dispose();
+    factory = TestLlmFactory([
+      MockLlmClient(reply: 'ok', chunkDelay: Duration.zero),
+    ]);
+    final settings = await createSettingsController(
+      settings: AppSettings.defaults.copyWith(
+        useConnectAddress: true,
+        connectAddress: '192.168.2.240',
+      ),
+    );
+    chat = ChatController(
+      repository: repository,
+      settings: settings,
+      clientFactory: factory,
+      conversations: conversations,
+    );
+    await chat.initialize();
+
+    await chat.send('hi');
+    await settle(chat);
+
+    expect(factory.lastConnectAddress, '192.168.2.240');
   });
 
   test('changing the model updates the conversation', () async {

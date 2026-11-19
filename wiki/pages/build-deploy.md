@@ -70,9 +70,21 @@ dart format lib test
 
 ## Version
 
-The app version is `version: 0.1.0+1` in `pubspec.yaml` (Android `versionName 0.1.0`,
-`versionCode 1`). Settings reads it at runtime with `package_info_plus`; if the platform
-channel is unavailable it falls back to `0.1.0 (build 1)`.
+The app version is `version: 0.2.0+2` in `pubspec.yaml` (Android `versionName 0.2.0`,
+`versionCode 2`). Settings reads it at runtime with `package_info_plus`; if the platform
+channel is unavailable it falls back to `0.2.0 (build 2)`.
+
+## LAN DNS override
+
+If the phone is on the LAN but does not use Pi-hole DNS, Settings → **LAN access**:
+enable **Use LAN IP override** and set the connect address (e.g. `192.168.2.240`). The
+base URL stays `https://llm.lan.otakeessen.com/v1`; the app dials the IP but keeps the
+hostname for TLS/SNI and certificate validation. Turn the switch off for a LiteLLM
+endpoint that uses normal DNS. This only works when the phone can route to the LAN IP;
+off-LAN still needs the VPN.
+
+The app waits up to 10 minutes for response headers (cold model loads) and 15 seconds for
+the TCP/TLS connect.
 
 ## Wiki helper
 

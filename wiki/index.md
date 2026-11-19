@@ -15,5 +15,8 @@
 ## Plans
 - [plans/ai-chat-app](pages/plans/ai-chat-app.md) — Ordered implementation plan and milestones for the Flutter LiteLLM chat app.
 
+## Tickets
+- [tickets/lan-ip-override](pages/tickets/lan-ip-override.md) — Switchable LAN IP override to bypass phone DNS while preserving TLS hostname validation (v0.2.0).
+
 ## Research
 - [research/litellm-endpoint](pages/research/litellm-endpoint.md) — Verified LiteLLM endpoint, model list, SSE streaming shape, and context-window caveats for the chat app.

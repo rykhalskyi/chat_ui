@@ -197,9 +197,13 @@ class ChatController extends ChangeNotifier {
     _notify();
     LlmClient? client;
     try {
+      final current = settings.settings;
       client = clientFactory.create(
-        baseUrl: settings.settings.baseUrl,
+        baseUrl: current.baseUrl,
         apiKey: settings.apiKey,
+        connectAddress: current.useConnectAddress
+            ? current.connectAddress
+            : null,
       );
       _models = await client.listModels();
     } catch (error) {
@@ -414,6 +418,7 @@ class ChatController extends ChangeNotifier {
     final client = clientFactory.create(
       baseUrl: current.baseUrl,
       apiKey: settings.apiKey,
+      connectAddress: current.useConnectAddress ? current.connectAddress : null,
     );
     _client = client;
     _assistant = assistant;

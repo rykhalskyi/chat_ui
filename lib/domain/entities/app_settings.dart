@@ -8,6 +8,8 @@ class AppSettings {
     required this.temperature,
     required this.maxTokens,
     required this.themeMode,
+    required this.useConnectAddress,
+    required this.connectAddress,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -17,6 +19,8 @@ class AppSettings {
     temperature: 0.7,
     maxTokens: 1024,
     themeMode: AppThemeMode.system,
+    useConnectAddress: false,
+    connectAddress: '',
   );
 
   final String baseUrl;
@@ -25,6 +29,8 @@ class AppSettings {
   final double temperature;
   final int maxTokens;
   final AppThemeMode themeMode;
+  final bool useConnectAddress;
+  final String connectAddress;
 
   AppSettings copyWith({
     String? baseUrl,
@@ -33,6 +39,8 @@ class AppSettings {
     double? temperature,
     int? maxTokens,
     AppThemeMode? themeMode,
+    bool? useConnectAddress,
+    String? connectAddress,
   }) {
     return AppSettings(
       baseUrl: baseUrl ?? this.baseUrl,
@@ -41,6 +49,8 @@ class AppSettings {
       temperature: temperature ?? this.temperature,
       maxTokens: maxTokens ?? this.maxTokens,
       themeMode: themeMode ?? this.themeMode,
+      useConnectAddress: useConnectAddress ?? this.useConnectAddress,
+      connectAddress: connectAddress ?? this.connectAddress,
     );
   }
 
@@ -52,7 +62,9 @@ class AppSettings {
         other.systemPrompt == systemPrompt &&
         other.temperature == temperature &&
         other.maxTokens == maxTokens &&
-        other.themeMode == themeMode;
+        other.themeMode == themeMode &&
+        other.useConnectAddress == useConnectAddress &&
+        other.connectAddress == connectAddress;
   }
 
   @override

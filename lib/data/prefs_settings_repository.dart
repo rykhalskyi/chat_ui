@@ -13,6 +13,8 @@ class PrefsSettingsRepository implements SettingsRepository {
   static const _temperatureKey = 'settings.temperature';
   static const _maxTokensKey = 'settings.maxTokens';
   static const _themeModeKey = 'settings.themeMode';
+  static const _useConnectAddressKey = 'settings.useConnectAddress';
+  static const _connectAddressKey = 'settings.connectAddress';
   static const _apiKeyKey = 'litellm.apiKey';
 
   final SharedPreferences prefs;
@@ -32,6 +34,10 @@ class PrefsSettingsRepository implements SettingsRepository {
         (mode) => mode.name == themeName,
         orElse: () => AppThemeMode.system,
       ),
+      useConnectAddress:
+          prefs.getBool(_useConnectAddressKey) ?? defaults.useConnectAddress,
+      connectAddress:
+          prefs.getString(_connectAddressKey) ?? defaults.connectAddress,
     );
   }
 
@@ -44,6 +50,8 @@ class PrefsSettingsRepository implements SettingsRepository {
       prefs.setDouble(_temperatureKey, settings.temperature),
       prefs.setInt(_maxTokensKey, settings.maxTokens),
       prefs.setString(_themeModeKey, settings.themeMode.name),
+      prefs.setBool(_useConnectAddressKey, settings.useConnectAddress),
+      prefs.setString(_connectAddressKey, settings.connectAddress),
     ]);
   }
 

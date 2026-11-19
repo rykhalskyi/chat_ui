@@ -15,3 +15,5 @@
 ## [2026-11-19] update | M5 complete: drafts, regenerate/retry, launcher icon, dark/large-text/wide-layout checks
 ## [2026-11-19] update | M6 complete: cleartext hardening, crash recovery, live model probes, release build and log check
 ## [2026-11-19] update | App version set to 0.1.0+1; Settings shows Version 0.1.0 (build 1)
+## [2026-11-19] ticket | LAN IP override (v0.2.0) implemented and verified
+## [2026-11-19] update | Version 0.2.0+2; LAN IP override switch, 10-minute header timeout

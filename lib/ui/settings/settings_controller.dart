@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../data/api_client_factory.dart';
 import '../../data/model_catalog_client.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/model_info.dart';
@@ -22,10 +23,15 @@ final class ConnectionTestFailure extends ConnectionTestResult {
 }
 
 class SettingsController extends ChangeNotifier {
-  SettingsController({required this.repository, required this.modelCatalog});
+  SettingsController({
+    required this.repository,
+    required this.modelCatalog,
+    this.apiClientFactory = const ApiClientFactory(),
+  });
 
   final SettingsRepository repository;
   final ModelCatalogClient modelCatalog;
+  final ApiClientFactory apiClientFactory;
 
   AppSettings _settings = AppSettings.defaults;
   String _apiKey = '';
@@ -101,12 +107,20 @@ class SettingsController extends ChangeNotifier {
   Future<void> testConnection({
     required String baseUrl,
     required String apiKey,
+    String? connectAddress,
   }) async {
     _isTesting = true;
     _connectionResult = null;
     notifyListeners();
     try {
-      final models = await modelCatalog.fetchModels(
+      final address = connectAddress?.trim() ?? '';
+      final catalog = address.isEmpty
+          ? modelCatalog
+          : ModelCatalogClient(
+              clientFactory: () =>
+                  apiClientFactory.create(connectAddress: address),
+            );
+      final models = await catalog.fetchModels(
         baseUrl: baseUrl,
         apiKey: apiKey,
       );

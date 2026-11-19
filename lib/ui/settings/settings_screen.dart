@@ -22,7 +22,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _systemPrompt;
   late final TextEditingController _temperature;
   late final TextEditingController _maxTokens;
+  late final TextEditingController _connectAddress;
   bool _obscureApiKey = true;
+  bool _useConnectAddress = false;
   late final Future<AppVersion> _versionFuture;
 
   @override
@@ -44,6 +46,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _maxTokens = TextEditingController(
       text: controller.settings.maxTokens.toString(),
     );
+    _connectAddress = TextEditingController(
+      text: controller.settings.connectAddress,
+    );
+    _useConnectAddress = controller.settings.useConnectAddress;
   }
 
   @override
@@ -54,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _systemPrompt.dispose();
     _temperature.dispose();
     _maxTokens.dispose();
+    _connectAddress.dispose();
     super.dispose();
   }
 
@@ -94,6 +101,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return null;
   }
 
+  String? _validateConnectAddress(String? value) {
+    if (!_useConnectAddress) {
+      return null;
+    }
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) {
+      return 'Enter the LAN host or IP.';
+    }
+    if (text.contains('://') || text.contains('/') || text.contains(' ')) {
+      return 'Use a host or IP only.';
+    }
+    return null;
+  }
+
   Future<void> _testConnection() async {
     FocusScope.of(context).unfocus();
     final controller = context.read<SettingsController>();
@@ -104,9 +125,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       return;
     }
+    if (_validateConnectAddress(_connectAddress.text) != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid connect address first.')),
+      );
+      return;
+    }
     await controller.testConnection(
       baseUrl: baseUrl,
       apiKey: _apiKey.text.trim(),
+      connectAddress: _useConnectAddress ? _connectAddress.text.trim() : null,
     );
   }
 
@@ -123,6 +151,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       temperature: double.parse(_temperature.text.trim()),
       maxTokens: int.parse(_maxTokens.text.trim()),
       themeMode: controller.settings.themeMode,
+      useConnectAddress: _useConnectAddress,
+      connectAddress: _connectAddress.text.trim(),
     );
     final saved = await controller.save(
       settings: settings,
@@ -148,6 +178,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _systemPrompt.text = defaults.systemPrompt;
       _temperature.text = defaults.temperature.toString();
       _maxTokens.text = defaults.maxTokens.toString();
+      _connectAddress.text = defaults.connectAddress;
+      _useConnectAddress = defaults.useConnectAddress;
     });
     context.read<SettingsController>().clearConnectionResult();
   }
@@ -257,6 +289,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   _ConnectionStatus(result: controller.connectionResult),
+                  const SizedBox(height: 24),
+                  Text('LAN access', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  SwitchListTile(
+                    key: const Key('useConnectAddressSwitch'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Use LAN IP override'),
+                    subtitle: const Text(
+                      'Bypass DNS for this endpoint; TLS still validates the hostname.',
+                    ),
+                    value: _useConnectAddress,
+                    onChanged: (value) {
+                      setState(() => _useConnectAddress = value);
+                      controller.clearConnectionResult();
+                    },
+                  ),
+                  if (_useConnectAddress) ...[
+                    const SizedBox(height: 4),
+                    TextFormField(
+                      key: const Key('connectAddressField'),
+                      controller: _connectAddress,
+                      keyboardType: TextInputType.url,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Connect address',
+                        hintText: '192.168.2.240',
+                        helperText: 'Host or IP only. The base URL host is kept for TLS.',
+                      ),
+                      validator: _validateConnectAddress,
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Text('Defaults', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 12),

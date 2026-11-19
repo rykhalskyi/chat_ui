@@ -11,7 +11,8 @@ summary: Flutter chat UI app (chat_ui_3) — tech stack, architecture, and folde
 implemented: settings and secure key storage, an OpenAI-compatible SSE client behind
 `LlmClient`, local SQLite history with interrupted-run recovery, a streaming chat UI
 with model selection, reasoning panel, stop/retry/regenerate, drafts, and history
-restore, plus the launcher icon, wide-screen layout, and release hardening.
+restore, plus the launcher icon, wide-screen layout, release hardening, and a switchable
+LAN IP override that bypasses phone DNS while keeping TLS hostname validation.
 
 ## Tech stack
 
@@ -46,9 +47,9 @@ Layered Flutter app with constructor-injected dependencies provided via `provide
 - `lib/domain/llm/` — `LlmClient`/`LlmStreamHandle`, `ChatRequest`, typed stream events.
 - `lib/domain/entities/` — `AppSettings`, `ModelInfo`, `Conversation`, `Message`.
 - `lib/domain/repositories/` — settings and chat repository contracts.
-- `lib/data/` — settings repo, model catalog, `LiteLlmClient`, `MockLlmClient`,
-  `SqfliteChatRepository`, and the SQLite DAO/schema.
-- `test/` — 45 unit/widget tests with fakes and `sqflite_common_ffi`.
+- `lib/data/` — settings repo, model catalog, `ApiClientFactory`, `LiteLlmClient`,
+  `MockLlmClient`, `SqfliteChatRepository`, and the SQLite DAO/schema.
+- `test/` — 47 unit/widget tests with fakes and `sqflite_common_ffi`.
 
 ## Folder structure
 
@@ -85,7 +86,7 @@ chat_ui/
 - Dart package name: `chat_ui_3`
 - Android `applicationId` / namespace: `com.otakeessen.chatui`
 - Android app label: `Chat UI`
-- App version: `0.1.0+1` (`versionName 0.1.0`, `versionCode 1`)
+- App version: `0.2.0+2` (`versionName 0.2.0`, `versionCode 2`)
 - Kotlin entry: `android/app/src/main/kotlin/com/otakeessen/chatui/MainActivity.kt`
 
 ## Design & plan
