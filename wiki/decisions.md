@@ -19,3 +19,7 @@ Append-only decision record. The "why" lives here; the full change history lives
 - [2026-11-19] D-16 — Persist each assistant reply as a streaming placeholder and mark leftovers stopped on launch — because an app kill mid-stream must preserve partial history and surface the interruption
 - [2026-11-19] D-17 — Place the model selector above the composer instead of the app bar — because the app-bar chip and actions squeezed conversation titles on phones
 - [2026-11-19] D-18 — Allow only one active generation at a time and block chat switching while streaming — because llama.cpp runs one model and one slot, so concurrent runs would queue and confuse latency
+- [2026-11-19] D-19 — Use the provided AI Chat Sparkle artwork as the launcher icon — because it matches the app identity and its transparent rounded square works as both legacy and adaptive icons
+- [2026-11-19] D-20 — Keep regenerate/retry in the app bar and rename/delete in the conversation drawer — because the extra app-bar overflow squeezed conversation titles
+- [2026-11-19] D-21 — Keep drafts in memory per conversation for the session — because persisting them adds little value while composing and keeps storage simple
+- [2026-11-19] D-22 — Disable cleartext traffic on Android — because all supported endpoints are HTTPS and this prevents accidental plaintext use

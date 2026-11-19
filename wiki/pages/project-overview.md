@@ -1,17 +1,17 @@
 ---
 created: 2026-11-19
 type: overview
-status: in-progress
+status: implemented
 summary: Flutter chat UI app (chat_ui_3) — tech stack, architecture, and folder layout.
 ---
 
 # Project Overview
 
-`chat_ui_3` is a Flutter AI chat client for the homelab LiteLLM proxy. M1–M4 are
+`chat_ui_3` is a Flutter AI chat client for the homelab LiteLLM proxy. M1–M6 are
 implemented: settings and secure key storage, an OpenAI-compatible SSE client behind
-`LlmClient`, local SQLite history with interrupted-run recovery, and a streaming chat UI
-with a model selector, reasoning panel, stop/retry, and history restore. Polish and
-hardening remain (M5–M6).
+`LlmClient`, local SQLite history with interrupted-run recovery, a streaming chat UI
+with model selection, reasoning panel, stop/retry/regenerate, drafts, and history
+restore, plus the launcher icon, wide-screen layout, and release hardening.
 
 ## Tech stack
 
@@ -24,6 +24,8 @@ hardening remain (M5–M6).
 - **Storage:** `shared_preferences` (settings), `flutter_secure_storage` (API key),
   `sqflite` (conversations/messages).
 - **Rendering:** `gpt_markdown` (streaming chat Markdown).
+- **Branding:** launcher icon generated from `assets/branding/app_icon.png`; adaptive
+  background `#171420`.
 - **Lints:** `flutter_lints` (`package:flutter_lints/flutter.yaml`), analyzer excludes
   `build/**` and `android/**`.
 - **Platforms:** Android (only platform folder present; iOS/web/desktop not scaffolded).
@@ -45,7 +47,7 @@ Layered Flutter app with constructor-injected dependencies provided via `provide
 - `lib/domain/repositories/` — settings and chat repository contracts.
 - `lib/data/` — settings repo, model catalog, `LiteLlmClient`, `MockLlmClient`,
   `SqfliteChatRepository`, and the SQLite DAO/schema.
-- `test/` — 42 unit/widget tests with fakes and `sqflite_common_ffi`.
+- `test/` — 45 unit/widget tests with fakes and `sqflite_common_ffi`.
 
 ## Folder structure
 
@@ -68,6 +70,7 @@ chat_ui/
 │       ├── chat/            # screen, controllers, chat widgets
 │       └── settings/        # settings screen + controller
 ├── test/                    # unit/widget tests + fakes
+├── assets/branding/         # source app icon (not bundled)
 ├── android/                 # Android host (Kotlin, Gradle KTS)
 │   └── app/src/main/kotlin/com/otakeessen/chatui/MainActivity.kt
 ├── wiki/                    # this project knowledge base
@@ -83,13 +86,13 @@ chat_ui/
 - Android app label: `Chat UI`
 - Kotlin entry: `android/app/src/main/kotlin/com/otakeessen/chatui/MainActivity.kt`
 
-## Planned work
+## Design & plan
 
-The app is being designed as a small AI chat client for the homelab LiteLLM proxy:
-[epic](epics/ai-chat-app.md) · [design spec](specs/ai-chat-app.md) ·
+[Epic](epics/ai-chat-app.md) · [design spec](specs/ai-chat-app.md) ·
 [implementation plan](plans/ai-chat-app.md).
 
 ## Notes
 
 - Git remote: `git@github.com:rykhalskyi/chat_ui.git` (branch `main`).
 - README is still the stock Flutter template.
+- Release builds currently use the debug signing config; add a keystore before distribution.

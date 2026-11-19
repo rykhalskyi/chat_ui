@@ -53,6 +53,8 @@ class ChatController extends ChangeNotifier {
   String? _runError;
   bool _contextTrimmed = false;
   int _droppedMessages = 0;
+  final Map<String, String> _drafts = {};
+  static const _newChatDraftKey = '__new__';
 
   LlmClient? _client;
   LlmStreamHandle? _handle;
@@ -81,6 +83,8 @@ class ChatController extends ChangeNotifier {
   bool get contextTrimmed => _contextTrimmed;
   int get droppedMessages => _droppedMessages;
   String? get assistantId => _assistant?.id;
+  String get draftKey => _active?.id ?? _newChatDraftKey;
+  String get draft => _drafts[draftKey] ?? '';
 
   bool get isRunning =>
       _phase == ChatRunPhase.connecting ||
@@ -96,6 +100,16 @@ class ChatController extends ChangeNotifier {
     return last.role == ChatRole.assistant &&
         (last.status == MessageStatus.error ||
             last.status == MessageStatus.stopped);
+  }
+
+  bool get canRegenerate {
+    if (isRunning || _messages.isEmpty) {
+      return false;
+    }
+    final last = _messages.last;
+    return last.role == ChatRole.assistant &&
+        last.status == MessageStatus.complete &&
+        last.content.isNotEmpty;
   }
 
   Future<void> initialize() async {
@@ -152,6 +166,7 @@ class ChatController extends ChangeNotifier {
       modelId: model,
       systemPrompt: settings.settings.systemPrompt,
     );
+    _drafts.remove(_newChatDraftKey);
     await open(conversation);
   }
 
@@ -207,7 +222,9 @@ class ChatController extends ChangeNotifier {
         return;
       }
     }
+    _drafts.remove(_newChatDraftKey);
     final active = _active!;
+    _drafts.remove(active.id);
     final model = _selectedModel;
     final prior = List<Message>.of(_messages);
     final now = DateTime.now();
@@ -245,6 +262,17 @@ class ChatController extends ChangeNotifier {
     if (isRunning || !canRetry) {
       return;
     }
+    await _rerunLastAssistant();
+  }
+
+  Future<void> regenerateLast() async {
+    if (isRunning || !canRegenerate) {
+      return;
+    }
+    await _rerunLastAssistant();
+  }
+
+  Future<void> _rerunLastAssistant() async {
     final last = _messages.last;
     final userIndex = _messages.lastIndexWhere((m) => m.role == ChatRole.user);
     if (userIndex < 0) {
@@ -306,6 +334,7 @@ class ChatController extends ChangeNotifier {
   }
 
   Future<void> conversationDeleted(String id) async {
+    _drafts.remove(id);
     if (_active?.id != id) {
       return;
     }
@@ -320,6 +349,15 @@ class ChatController extends ChangeNotifier {
     _droppedMessages = 0;
     _selectedModel = settings.settings.defaultModel;
     _notify();
+  }
+
+  void setDraft(String value) {
+    final key = draftKey;
+    if (value.isEmpty) {
+      _drafts.remove(key);
+    } else {
+      _drafts[key] = value;
+    }
   }
 
   void clearError() {

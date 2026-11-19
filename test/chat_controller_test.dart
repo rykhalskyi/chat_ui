@@ -179,6 +179,56 @@ void main() {
     expect(persisted.last.reasoning, 'thinking deeply');
   });
 
+  test('keeps drafts per conversation', () async {
+    await chat.initialize();
+    await chat.newChat();
+    final firstId = chat.active!.id;
+    chat.setDraft('first draft');
+
+    await chat.newChat();
+    final secondId = chat.active!.id;
+    chat.setDraft('second draft');
+
+    await chat.open(
+      conversations.conversations.firstWhere((c) => c.id == firstId),
+    );
+    expect(chat.draft, 'first draft');
+
+    await chat.open(
+      conversations.conversations.firstWhere((c) => c.id == secondId),
+    );
+    expect(chat.draft, 'second draft');
+  });
+
+  test('regenerates a completed answer in place', () async {
+    chat.dispose();
+    factory = TestLlmFactory([
+      MockLlmClient(reply: 'first answer', chunkDelay: Duration.zero),
+      MockLlmClient(reply: 'second answer', chunkDelay: Duration.zero),
+    ]);
+    final settings = await createSettingsController();
+    chat = ChatController(
+      repository: repository,
+      settings: settings,
+      clientFactory: factory,
+      conversations: conversations,
+    );
+    await chat.initialize();
+    await chat.send('hi');
+    await settle(chat);
+
+    expect(chat.canRegenerate, isTrue);
+    expect(chat.messages.last.content, 'first answer');
+
+    await chat.regenerateLast();
+    await settle(chat);
+
+    expect(factory.calls, 2);
+    expect(chat.messages, hasLength(2));
+    expect(chat.messages.last.content, 'second answer');
+    expect(chat.messages.last.status, MessageStatus.complete);
+  });
+
   test('changing the model updates the conversation', () async {
     await chat.initialize();
     await chat.send('hi');

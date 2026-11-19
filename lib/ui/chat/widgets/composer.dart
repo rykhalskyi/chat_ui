@@ -6,12 +6,18 @@ class Composer extends StatefulWidget {
     required this.isRunning,
     required this.onSend,
     required this.onStop,
+    required this.draftKey,
+    required this.draft,
+    required this.onDraftChanged,
     this.hintText = 'Message…',
   });
 
   final bool isRunning;
   final ValueChanged<String> onSend;
   final VoidCallback onStop;
+  final String draftKey;
+  final String draft;
+  final ValueChanged<String> onDraftChanged;
   final String hintText;
 
   @override
@@ -19,8 +25,27 @@ class Composer extends StatefulWidget {
 }
 
 class _ComposerState extends State<Composer> {
-  final _controller = TextEditingController();
-  bool _hasText = false;
+  late final TextEditingController _controller;
+  late bool _hasText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.draft);
+    _hasText = widget.draft.trim().isNotEmpty;
+  }
+
+  @override
+  void didUpdateWidget(covariant Composer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.draftKey != widget.draftKey) {
+      _controller.value = TextEditingValue(
+        text: widget.draft,
+        selection: TextSelection.collapsed(offset: widget.draft.length),
+      );
+      _hasText = widget.draft.trim().isNotEmpty;
+    }
+  }
 
   @override
   void dispose() {
@@ -34,6 +59,7 @@ class _ComposerState extends State<Composer> {
       return;
     }
     _controller.clear();
+    widget.onDraftChanged('');
     setState(() => _hasText = false);
     widget.onSend(text);
   }
@@ -64,6 +90,7 @@ class _ComposerState extends State<Composer> {
                   keyboardType: TextInputType.multiline,
                   textInputAction: TextInputAction.newline,
                   onChanged: (value) {
+                    widget.onDraftChanged(value);
                     final hasText = value.trim().isNotEmpty;
                     if (hasText != _hasText) {
                       setState(() => _hasText = hasText);

@@ -1,7 +1,7 @@
 ---
 created: 2026-11-19
 type: spec
-status: in-progress
+status: implemented
 summary: Design for a Flutter AI chat app over LiteLLM — connector interface, streaming, persistence, model selector, thinking status, UI.
 ---
 

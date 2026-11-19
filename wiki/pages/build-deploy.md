@@ -51,7 +51,16 @@ flutter build apk --release   # currently signed with debug keys
 ```
 
 Release signing is not configured: `android/app/build.gradle.kts` signs release with
-the debug config. Add a real keystore before publishing.
+the debug config. Add a real keystore before publishing. Cleartext HTTP is disabled
+(`android:usesCleartextTraffic="false"`); use HTTPS endpoints.
+
+### Launcher icon
+
+Source image: `assets/branding/app_icon.png` (not bundled into the APK). Generated
+legacy icons live in `android/app/src/main/res/mipmap-*`, and the adaptive icon uses
+`mipmap-anydpi-v26/ic_launcher.xml` plus `drawable-*/ic_launcher_foreground.png` and the
+`ic_launcher_background` color (`#171420`). Regenerate the PNGs with ImageMagick after
+changing the source.
 
 ## Codegen / formatting
 

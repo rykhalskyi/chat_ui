@@ -1,7 +1,7 @@
 ---
 created: 2026-11-19
 type: epic
-status: in-progress
+status: implemented
 summary: Flutter AI chat app backed by the homelab LiteLLM proxy — design and delivery milestones.
 ---
 
@@ -46,8 +46,8 @@ Design only for now — no implementation code has been written.
 | M2 | LLM layer (interface + SSE client) | done | 1 d |
 | M3 | SQLite history | done | 1 d |
 | M4 | Chat UI MVP | done | 2 d |
-| M5 | Polish (history actions, markdown, status) | proposed | 1 d |
-| M6 | Hardening, QA, docs | proposed | 1 d |
+| M5 | Polish (history actions, markdown, status) | done | 1 d |
+| M6 | Hardening, QA, docs | done | 1 d |
 
 ## Success criteria
 

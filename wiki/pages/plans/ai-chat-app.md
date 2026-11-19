@@ -1,7 +1,7 @@
 ---
 created: 2026-11-19
 type: plan
-status: in-progress
+status: implemented
 summary: Ordered implementation plan and milestones for the Flutter LiteLLM chat app.
 ---
 
@@ -182,13 +182,13 @@ model selector, empty state, auto-scroll, retry, and startup history restore. Th
 selector sits above the composer rather than in the app bar (D-17); single active run is
 enforced (D-18). Verified live on the emulator: `llama3.2-3b-cpp` and `gemma3-1b-cpp`
 stream, model switches persist, history survives relaunch, a stopped partial answer is
-kept, and usage tokens render. 42 tests pass.
+kept, and usage tokens render. 42 tests passed at the M4 boundary.
 
 Acceptance: end-to-end chat works with the mock and the live proxy; stopping keeps the
 partial text; a conversation with >4096 estimated tokens is trimmed and still answers;
 no duplicate messages after retry.
 
-## M5 — Polish (1 d)
+## M5 — Polish — **done** (1 d)
 
 - Rename/delete from the app bar and drawer; delete confirmation; empty-state handling.
 - Regenerate last answer; copy message; preserve draft per conversation.
@@ -198,10 +198,18 @@ no duplicate messages after retry.
 - Markdown edge cases: fenced code, long lines, links (open externally only if a URL
   launcher is added — otherwise plain text).
 
+Outcome: added in-memory drafts per conversation, regenerate/retry actions in the app
+bar, and the launcher icon set (legacy density PNGs + adaptive icon from
+`assets/branding/app_icon.png`, background `#171420`). Rename/delete remain in the
+conversation drawer; the redundant app-bar overflow was removed so titles fit (D-19,
+D-20). Verified the wide layout at tablet size, added widget coverage for dark mode and
+large-text long Markdown (code fences + long lines), and tooltips cover the icon actions.
+45 tests pass.
+
 Acceptance: UX checklist from the spec passes on a phone-sized emulator; dark mode
 legible; no overflow errors in release-sized text scaling.
 
-## M6 — Hardening, QA, docs (1 d)
+## M6 — Hardening, QA, docs — **done** (1 d)
 
 1. Release manifest: `INTERNET` permission present; confirm no cleartext traffic.
 2. Manual matrix against live LiteLLM:
@@ -214,6 +222,16 @@ legible; no overflow errors in release-sized text scaling.
 4. Run `flutter analyze`, `flutter test`, `flutter build apk --release` (debug signing).
 5. Update `wiki/pages/project-overview.md` (tech stack/architecture) and
    `wiki/pages/build-deploy.md` (new run/test notes); log the epic outcome.
+
+Outcome: release manifest keeps `INTERNET` and now sets
+`android:usesCleartextTraffic="false"`. Live probes succeeded for `llama3.2-3b-cpp`,
+`gemma3-1b-cpp`, `gemma3-4b-cpp`, `qwen2.5-coder-3b-cpp`, and `deepseek-chat`
+(`qwen3.5-4b-cpp` stays covered by the M0 reasoning/stream test; its ~74 s reasoning
+makes it unsuitable for the fast QA loop). Cold start shows the waiting state; stop
+keeps the partial reply; killing the app mid-stream and relaunching shows `Stopped`;
+history survives restarts. Cleartext is disabled (D-22). Release APK builds, installs, and runs; logcat contained no
+API key, prompt, or `Authorization` strings. `flutter analyze` clean; 45 tests pass.
+Remaining risk: physical-device LAN/TLS check (emulator verified).
 
 Acceptance: test suite green; release APK builds; manual matrix signed off.
 

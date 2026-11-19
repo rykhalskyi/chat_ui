@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import 'chat_controller.dart';
-import 'conversation_actions.dart';
 import 'widgets/composer.dart';
 import 'widgets/conversation_panel.dart';
 import 'widgets/empty_state.dart';
@@ -157,6 +156,9 @@ class _ChatScreenState extends State<ChatScreen> {
           isRunning: chat.isRunning,
           onSend: (text) => unawaited(chat.send(text)),
           onStop: () => unawaited(chat.cancel()),
+          draftKey: chat.draftKey,
+          draft: chat.draft,
+          onDraftChanged: chat.setDraft,
           hintText: active == null
               ? 'Start a new chat…'
               : 'Message ${chat.selectedModel}…',
@@ -191,28 +193,26 @@ class _ChatScreenState extends State<ChatScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          if (chat.canRegenerate)
+            IconButton(
+              key: const Key('regenerateButton'),
+              tooltip: 'Regenerate',
+              onPressed: () => unawaited(chat.regenerateLast()),
+              icon: const Icon(Icons.refresh),
+            ),
+          if (chat.canRetry)
+            IconButton(
+              key: const Key('retryButton'),
+              tooltip: 'Retry',
+              onPressed: () => unawaited(chat.retryLast()),
+              icon: const Icon(Icons.replay),
+            ),
           IconButton(
             key: const Key('openSettingsButton'),
             tooltip: 'Settings',
             onPressed: _openSettings,
             icon: const Icon(Icons.settings_outlined),
           ),
-          if (active != null)
-            PopupMenuButton<_ChatAction>(
-              tooltip: 'Chat actions',
-              onSelected: (action) async {
-                switch (action) {
-                  case _ChatAction.rename:
-                    await renameConversationDialog(context, active);
-                  case _ChatAction.delete:
-                    await deleteConversationDialog(context, active);
-                }
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: _ChatAction.rename, child: Text('Rename')),
-                PopupMenuItem(value: _ChatAction.delete, child: Text('Delete')),
-              ],
-            ),
         ],
       ),
       body: wide
@@ -230,8 +230,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 }
-
-enum _ChatAction { rename, delete }
 
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.message, required this.onDismiss});
