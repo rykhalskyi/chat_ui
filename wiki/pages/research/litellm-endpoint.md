@@ -91,10 +91,62 @@ curl -sS -N --resolve llm.lan.otakeessen.com:443:192.168.2.240 \
   -d '{"model":"llama3.2-3b-cpp","messages":[{"role":"user","content":"hi"}],"stream":true,"stream_options":{"include_usage":true},"max_tokens":32}'
 ```
 
+## M0 verification (2026-11-19)
+
+### Host probe (`package:http` 1.6.0, Linux)
+
+| Check | Result |
+|---|---|
+| `GET /v1/models` | 200, 250 ms, 6 models |
+| `llama3.2-3b-cpp` stream | first token 760 ms, 13 deltas, 2.8 s total |
+| `gemma3-1b-cpp` stream | first token 2.1 s, 2.8 s total |
+| `gemma3-4b-cpp` stream | first token 4.2 s, 5.9 s total |
+| `qwen3.5-4b-cpp` stream | **250 `reasoning_content` deltas**, first content at **74.5 s**, 75.3 s total for “17*23” |
+| Cancel (close client) | reader throws `ClientException: Connection closed while receiving data` |
+| Wrong API key | HTTP **400** `{"error":{"type":"no_db_connection","message":"No connected db."}}` |
+| Unknown model | HTTP **400** `invalid_request_error` (`Invalid model name ...`) |
+| `deepseek-chat` | 200, no reasoning content |
+
+`qwen3.5-4b-cpp` is a reasoning model and **does** stream
+`choices[0].delta.reasoning_content` directly (not under `provider_specific_fields`).
+Usage reports `completion_tokens_details.reasoning_tokens` (224 for the test). Content
+starts only after the reasoning phase. On CPU this can take minutes, so it is unsuitable
+as the default or for quick tests.
+
+### Android emulator (`Medium_Phone`, API 37, Android 17, x86_64)
+
+- Boot with `flutter emulators --launch Medium_Phone`; it can take several minutes to
+  appear in `flutter devices`. Manually launched headless/windowed instances of this
+  AVD segfaulted (`qemu-system-x86_64`, SIGSEGV); the Flutter-launched one worked.
+- Device resolves `llm.lan.otakeessen.com` → `192.168.2.240`; no `curl`/`wget`/`openssl`
+  in the image, so validation ran through a temporary Flutter probe app.
+- Probe results: `GET /models` 200 in 1.2 s; `llama3.2-3b-cpp` stream HTTP 200, first
+  token 5.6 s (NAT/cold), 14 deltas, usage returned. TLS system trust works.
+- Plain `ping` gets no reply (ICMP likely filtered); do not use it as a connectivity test.
+
+### Package picks (validated)
+
+| Package | Version | Notes |
+|---|---|---|
+| `gpt_markdown` | 1.4.1 | Imports `material_ui` itself; supports `GptMarkdown(..., isStreaming: true)` incremental rendering |
+| `sqflite` | 2.4.6 | Android SQLite |
+| `sqflite_common_ffi` | 2.4.7 | Host/in-memory DB test passed |
+| `flutter_secure_storage` | 11.2.0 | Runtime-verified in M1 (key persisted across restart) |
+| `provider` | 6.1.5+1 | State/DI |
+| `http` | 1.6.0 | SSE + cancellation via client close |
+| `uuid` | 4.6.0 | IDs |
+
+`flutter_markdown` is discontinued (replaced by `flutter_markdown_plus`); use
+`gpt_markdown`. A temporary app with all of the above plus `gpt_markdown`/
+`sqflite_common_ffi` tests built a debug APK successfully on Flutter 3.50.0.
+
 ## Conclusions
 
 1. Implement a plain OpenAI-compatible SSE client; no LiteLLM-specific SDK is needed.
 2. Fetch models dynamically; enrich with a local context override for local models.
 3. Budget context for 4096 tokens regardless of advertised limits.
-4. Treat “thinking” as a UI run state; reasoning text is optional and model-dependent.
-5. Verify DNS/TLS from the actual Android device before building the UI (M0).
+4. `qwen3.5-4b-cpp` supplies real reasoning deltas; all other current models do not.
+5. Use `llama3.2-3b-cpp` / `gemma3-*` for fast tests; keep `qwen3.5` opt-in.
+6. Android device access is confirmed on the emulator; a physical-device check is still
+   worthwhile before release.
+7. Treat cancellation and 400 errors specially (see above), not as generic failures.

@@ -1,7 +1,7 @@
 ---
 created: 2026-11-19
 type: plan
-status: proposed
+status: in-progress
 summary: Ordered implementation plan and milestones for the Flutter LiteLLM chat app.
 ---
 
@@ -30,35 +30,39 @@ flowchart LR
 M2 and M3 can run in parallel once M1 lands. M4 is the integration point and uses
 `MockLlmClient` first, then the live proxy.
 
-## M0 — Validate assumptions (0.5 d)
+## M0 — Validate assumptions — **done** (0.5 d)
 
-Goal: retire the two risks that could invalidate the design.
+Outcome: all checks passed. Details and numbers are in
+[the research page](../research/litellm-endpoint.md#m0-verification-2026-11-19).
 
-1. **Device access:** on the actual Android device/emulator, `GET
-   https://llm.lan.otakeessen.com/v1/models` with `sk-litellm`. Confirm DNS resolves to
-   `192.168.2.240` and the wildcard cert is trusted. If not, fix via LAN DNS/VPN and
-   write the workaround down. Do not use the raw IP (cert/SNI failure).
-2. **Streaming from Dart:** a throwaway `dart run` script or test using `http` against
-   `/chat/completions` with `stream: true`; confirm incremental SSE chunks arrive and
-   can be cancelled by closing the client.
-3. **Package picks:** verify the Markdown widget renders chat-style Markdown on Flutter
-   3.50 and the chosen package is maintained (`gpt_markdown` preferred; fall back to
-   `markdown_widget`/`flutter_markdown` forks). Verify `sqflite` works on the target and
-   `sqflite_common_ffi` in host tests. Verify `material_ui` re-exports the widgets used.
-4. Optional: decide whether to add the Linux desktop host
-   (`flutter create --platforms=linux .`) for fast iteration; note secure-storage
-   implications.
+1. **Android access:** the emulator (`Medium_Phone`, API 37) resolves
+   `llm.lan.otakeessen.com` → `192.168.2.240`, trusts the cert, lists 6 models, and
+   streams `llama3.2-3b-cpp`. Boot it with `flutter emulators --launch Medium_Phone`
+   (allow several minutes; manual headless launches of this AVD segfaulted). A physical
+   device check is still recommended before release.
+2. **Streaming/cancel from Dart:** verified with `http` 1.6.0. Closing the client aborts
+   the stream but throws `ClientException`, so M2 must map that to `cancelled`.
+3. **Errors:** wrong key and unknown model both return HTTP 400 with a LiteLLM `error`
+   object; M2 maps by `error.type`, not status code.
+4. **Packages:** `gpt_markdown` 1.4.1 (imports `material_ui`, supports streaming
+   rendering), `sqflite` 2.4.6, `sqflite_common_ffi` 2.4.7 (host test passed),
+   `flutter_secure_storage` 11.2.0, `provider` 6.1.5+1, `http` 1.6.0, `uuid` 4.6.0.
+   A debug APK with all plugins built successfully.
+5. **Model guidance:** use `llama3.2-3b-cpp` (~0.8 s first token host) and `gemma3-*`
+   for development. `qwen3.5-4b-cpp` streams real `reasoning_content` but took ~74 s
+   before content; keep it opt-in.
+6. Deferred: Linux desktop host. Not needed for v1; revisit if emulator iteration is
+   slow.
 
-Acceptance: one streamed reply on-device (or a documented, accepted workaround), package
-choices recorded. Append results to the research page.
-
-## M1 — Skeleton, settings, DI (1 d)
+## M1 — Skeleton, settings, DI — **done** (1 d)
 
 Dependencies (`pubspec.yaml`, pin via lockfile):
 
-- Runtime: `http`, `provider`, `sqflite`, `path`, `path_provider`,
-  `shared_preferences`, `flutter_secure_storage`, `uuid`, Markdown package chosen in M0.
-- Dev: `sqflite_common_ffi` (host tests), existing `flutter_lints`/`flutter_test`.
+- Runtime: `http ^1.6.0`, `provider ^6.1.5`, `sqflite ^2.4.6`, `path`,
+  `path_provider`, `shared_preferences`, `flutter_secure_storage ^11.2.0`,
+  `uuid ^4.6.0`, `gpt_markdown ^1.4.1` (chosen in M0; imports `material_ui` and supports
+  streaming Markdown).
+- Dev: `sqflite_common_ffi ^2.4.7` (host tests), existing `flutter_lints`/`flutter_test`.
 
 Work:
 
@@ -77,10 +81,17 @@ Files: `lib/main.dart`, `lib/app.dart`, `lib/core/app_theme.dart`,
 `lib/domain/repositories/settings_repository.dart`,
 `lib/data/prefs_settings_repository.dart`, `lib/ui/settings/*`.
 
+Outcome: implemented the layered `lib/` structure, Material 3 light/dark theme, home
+placeholder, `SettingsRepository` + `PrefsSettingsRepository` (prefs + secure storage),
+`ModelCatalogClient`, `SettingsController`, and `SettingsScreen`. Android app id is
+`com.otakeessen.chatui`. Added the release `INTERNET` permission. Verified on the
+emulator: settings save, API key is obscured and survives a force-stop/relaunch, and
+"Test connection" returns all 6 live models. `flutter analyze` clean; 7 tests pass.
+
 Acceptance: settings persist across restart; test connection reports the live model
 count or a readable error; `flutter analyze` clean.
 
-## M2 — LLM layer (1 d)
+## M2 — LLM layer — **done** (1 d)
 
 Work:
 
@@ -89,21 +100,31 @@ Work:
 2. `core/sse_parser.dart`: byte/line decoder that yields `data` payloads, handles CRLF,
    comments, multiple chunks per line, `[DONE]`.
 3. `data/litellm_client.dart`: `GET /models`, `POST /chat/completions` streaming;
-   per-request `http.Client` for cancellation; error mapping to `LlmException`.
+   per-request `http.Client` for cancellation. Closing the client throws
+   `ClientException` — catch it in the cancel path and emit `cancelled`. Map errors from
+   the LiteLLM `error` object (both bad key and bad model are HTTP 400) to `LlmException`.
 4. `data/mock_llm_client.dart`: canned stream with configurable delay, reasoning
    delta option, and error injection for tests/demo.
-5. `authored` unit tests: SSE parser table tests, client happy path/error/cancel using
-   `http.testing.MockClient`, model parsing.
+5. Unit tests: SSE parser table tests, client happy path/error/cancel using
+   `http.testing.MockClient`, model parsing, reasoning delta, usage chunk.
 6. Optional debug screen: send “hi” and print stream events, used only in development.
 
 Files: `lib/domain/llm/*`, `lib/core/sse_parser.dart`, `lib/core/exceptions.dart`,
 `lib/data/litellm_client.dart`, `lib/data/mock_llm_client.dart`,
 `test/sse_parser_test.dart`, `test/litellm_client_test.dart`.
 
-Acceptance: unit tests pass; a dev screen streams against the live proxy; cancellation
-stops network activity and yields a cancelled terminal event.
+Outcome: implemented `ChatRole`/`ChatMessage`, the `LlmClient` + cancellable
+`LlmStreamHandle` interface, sealed stream events, `LlmException` mapping, `SseParser`,
+`ApiUris`, `LiteLlmClient`, `MockLlmClient`, and `LlmClientFactory`. Tests cover SSE
+framing, content/reasoning/usage, finish reasons, 400 auth vs unknown-model mapping,
+SSE error payloads, malformed streams, cancellation, and model listing. 13 dedicated
+tests pass; the live endpoint was already validated in M0.
 
-## M3 — Persistence (1 d)
+Acceptance: unit tests pass; a dev screen streams against the live proxy; cancellation
+stops network activity and yields a cancelled terminal event (not an error); a wrong key
+and an unknown model show distinct, readable messages despite both being HTTP 400.
+
+## M3 — Persistence — **done** (1 d)
 
 Work:
 
@@ -121,10 +142,16 @@ Files: `lib/data/db/app_database.dart`, `lib/data/db/chat_dao.dart`,
 `lib/data/sqflite_chat_repository.dart`,
 `lib/domain/repositories/chat_repository.dart`, `test/chat_repository_test.dart`.
 
+Outcome: implemented `AppDatabase` (schema v1, foreign keys, cascade, message index),
+`ChatDao`, and `SqfliteChatRepository` (conversations, exchanges, streaming updates,
+titles, rename/delete, recovery). `main()` now opens the DB and marks interrupted runs
+stopped on launch. Verified on Android: `databases/chat_ui.db` is created. 8 repository
+tests plus the full 30-test suite pass.
+
 Acceptance: repository tests pass; reopening the DB preserves conversations and message
 order; an interrupted row becomes `stopped` with an error note.
 
-## M4 — Chat UI MVP (2 d)
+## M4 — Chat UI MVP — **done** (2 d)
 
 Work:
 
@@ -134,7 +161,8 @@ Work:
    event handling; throttled persistence; single active run globally; expose run state
    for the status row.
 3. Chat screen and widgets:
-   - `message_bubble` (user/assistant, Markdown, copy, reasoning panel, footer),
+   - `message_bubble` (user/assistant, `GptMarkdown` with `isStreaming` while active,
+     copy, reasoning panel, footer),
    - `composer` (auto-grow, send/stop),
    - `run_status` (spinner/label/elapsed, error + retry),
    - `model_selector` (bottom sheet from `/v1/models`, context badge, refresh),
@@ -146,6 +174,15 @@ Work:
    `MockLlmClient` (debug/demo flag).
 6. Widget tests with `MockLlmClient`: send, status transitions, stop, error/retry, model
    selector, history.
+
+Outcome: implemented `ConversationsController`, `ChatController`, the responsive chat
+screen (drawer on phones, side panel on wide screens), message bubbles with streaming
+`GptMarkdown`, reasoning panel, composer with send/stop, run status with elapsed time,
+model selector, empty state, auto-scroll, retry, and startup history restore. The model
+selector sits above the composer rather than in the app bar (D-17); single active run is
+enforced (D-18). Verified live on the emulator: `llama3.2-3b-cpp` and `gemma3-1b-cpp`
+stream, model switches persist, history survives relaunch, a stopped partial answer is
+kept, and usage tokens render. 42 tests pass.
 
 Acceptance: end-to-end chat works with the mock and the live proxy; stopping keeps the
 partial text; a conversation with >4096 estimated tokens is trimmed and still answers;
@@ -193,12 +230,12 @@ Acceptance: test suite green; release APK builds; manual matrix signed off.
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Phone cannot reach LAN host (DNS/cert/VPN) | blocker | M0 on real device; VPN; never use raw IP |
+| Phone cannot reach LAN host (DNS/cert/VPN) | blocker | M0 passed on emulator; still check a physical device; VPN; never use raw IP |
 | Cold model load looks frozen (10–60 s) | UX | `Waiting for model…` + elapsed; generous timeouts; hint after 5 s |
 | LiteLLM advertises 131k but llama.cpp is 4096 | failed/expensive requests | client override + trimming + notice; test long chat |
 | One model, one slot; concurrent sends queue | confusing latency | single active run; stop prompt in other chats |
 | DeepSeek costs money | surprise spend | local model default; show cost; no auto-fallback UI confusion |
-| Markdown package churn | rework | validate/pin in M0; isolate rendering in one widget |
+| Markdown package churn | rework | resolved in M0: `gpt_markdown` 1.4.1 targets `material_ui`; keep rendering in one widget |
 | `http` cancellation leaves the stream open | wasted tokens | per-request client + test that close aborts |
 | Secure storage unavailable on a dev target | blocked onboarding | Android-first; document fallback for desktop |
 | Prompts are traced in Langfuse server-side | privacy expectation | state it in settings/about; LAN-only |
@@ -207,7 +244,7 @@ Acceptance: test suite green; release APK builds; manual matrix signed off.
 
 | Slug | Scope |
 |---|---|
-| `ticket-m0-endpoint-spike` | Device connectivity + package validation |
+| `ticket-m0-endpoint-spike` | Device connectivity + package validation — **done** |
 | `ticket-m1-app-shell-settings` | Theme, shell, settings, DI |
 | `ticket-m2-llm-client` | Interface, SSE parser, LiteLLM + mock clients |
 | `ticket-m3-chat-persistence` | sqflite schema, DAO, repository, recovery |

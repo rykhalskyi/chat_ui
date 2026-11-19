@@ -22,6 +22,19 @@ flutter run              # debug on attached device/emulator
 flutter run --release
 ```
 
+### Android emulator
+
+```bash
+flutter emulators --launch Medium_Phone   # boot can take several minutes
+flutter devices
+flutter run -d emulator-5554
+```
+
+`adb` is at `/home/admin/Android/Sdk/platform-tools/adb` (not on `PATH`). Manual
+`emulator` launches of this API 37 AVD segfaulted; the `flutter emulators --launch`
+instance works. The emulator resolves the LAN host and trusts its cert (verified), but a
+physical-device check is still advisable before release.
+
 ## Analyze & test
 
 ```bash

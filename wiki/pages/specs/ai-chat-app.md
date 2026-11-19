@@ -1,7 +1,7 @@
 ---
 created: 2026-11-19
 type: spec
-status: proposed
+status: in-progress
 summary: Design for a Flutter AI chat app over LiteLLM — connector interface, streaming, persistence, model selector, thinking status, UI.
 ---
 
@@ -45,6 +45,13 @@ See [the research page](../research/litellm-endpoint.md) for raw evidence.
   32k–262k. One model is resident at a time; model switches cold-start.
 - LAN-only: device needs LAN DNS + the wildcard cert (or VPN). Prompts are traced in
   Langfuse by LiteLLM.
+
+**M0 validated (2026-11-19):** end-to-end from Dart on Linux and from a Flutter probe on
+the Android emulator (same LAN DNS/TLS path). First-token latency: `llama3.2-3b-cpp`
+~0.8 s host / ~5.6 s emulator, `gemma3-1b-cpp` ~2.1 s, `gemma3-4b-cpp` ~4.2 s.
+`qwen3.5-4b-cpp` is a reasoning model, streams `reasoning_content`, and needed ~74 s
+before its first content token — use `llama3.2`/`gemma3` for development and tests, and
+keep `qwen3.5` opt-in. See the [research page](../research/litellm-endpoint.md#m0-verification-2026-11-19).
 
 ## 4. User stories
 
@@ -215,12 +222,17 @@ Parsing rules:
 - Usage comes in a final chunk when requested; store tokens/cost when present.
 - Malformed JSON: skip and log in debug, but fail the run if an explicit
   `{"error": {...}}` payload arrives or the stream closes without content.
-- Non-2xx before streaming: parse `error.message`, map by status (401 unauthorized,
-  404 model, 429 rate limit, 5xx server).
+- Non-2xx before streaming: parse the LiteLLM `error` object. Do not rely on status
+  codes: a wrong key and an unknown model both return **400** (`no_db_connection` vs
+  `invalid_request_error`). Map 400 + `invalid_request_error` to “unknown model/request”,
+  400 + `no_db_connection`/auth text to “check API key”, 429 to rate limit, 5xx to server.
+  Always show the server’s message.
 - Timeouts: 15 s connect; **no short read timeout** while streaming (model cold starts
   can take tens of seconds). Show elapsed time in the UI instead.
 - Cancellation: each request uses its own `http.Client`; `cancel()` closes it, emits
-  `StreamFinished(cancelled)`, and persists the partial answer.
+  `StreamFinished(cancelled)`, and persists the partial answer. Closing the client makes
+  the stream reader throw `ClientException: Connection closed while receiving data`;
+  the client must translate that into `cancelled`, not surface it as an error.
 - Retries: models fetch may retry once; chat is never auto-retried (avoid duplicate
   generations). “Regenerate” is an explicit user action.
 
@@ -299,7 +311,9 @@ dark, and system themes.
 **Chat screen**
 
 - Message list: user bubbles right-aligned; assistant messages left/full-width with
-  Markdown (code blocks, lists, tables, inline code) and a copy action.
+  Markdown (code blocks, lists, tables, inline code) and a copy action. Render with
+  `GptMarkdown(text, isStreaming: isActive, ...)` rebuilt from the accumulated text —
+  it reuses settled blocks while streaming and already targets `material_ui`.
 - Reasoning panel: collapsible, above the answer, streams when `reasoning_content`
   arrives, auto-collapses once content starts. Hidden entirely if no reasoning.
 - Run status row: spinner + text + elapsed. Sequence:
@@ -375,7 +389,8 @@ dark, and system themes.
 Recorded in [decisions.md](../../decisions.md): D-01 connector interface, D-02 local
 SQLite history, D-03 `provider` controllers, D-04 `http` SSE client, D-05 independent
 4096 context budget, D-06 per-message model provenance, D-07 local titles, D-08 honest
-thinking state, D-09 key storage split, D-10 Android-first.
+thinking state, D-09 key storage split, D-10 Android-first, D-11 `gpt_markdown`
+streaming, D-12 fast default model, D-13 explicit cancellation/400 error mapping.
 
 ## 15. Open questions
 
@@ -385,6 +400,6 @@ Defaults are chosen above so implementation can start; flag if any should change
    (Secure storage on Linux needs libsecret/keyring.)
 2. Is any chat export/backup needed, or is local-only sufficient?
 3. Allow multiple conversations to generate concurrently? (Default: no.)
-4. Will a reasoning model (e.g. `deepseek-reasoner`) be added to LiteLLM? If so, verify
-   the exact `reasoning_content` shape.
+4. `qwen3.5-4b-cpp` already emits `delta.reasoning_content` and is supported. If
+   `deepseek-reasoner` is added later, verify its shape; it is not in the current config.
 5. Is tool calling required soon, or explicitly post-MVP?
